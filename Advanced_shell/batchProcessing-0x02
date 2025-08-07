@@ -1,0 +1,77 @@
+#!/bin/bash
+
+# Create directory if it doesn't exist
+mkdir -p pokemon_data
+
+# List of Pokémon
+pokemon_list=("bulbasaur" "ivysaur" "venusaur" "charmander" "charmeleon")
+
+# Loop through each Pokémon
+for pokemon in "${pokemon_list[@]}"
+do
+    echo "Fetching data for $pokemon..."
+
+    # API URL
+    url="https://pokeapi.co/api/v2/pokemon/$pokemon"
+
+    # Output file
+    output_file="pokemon_data/${pokemon}.json"
+
+    # Fetch and check success
+    if curl -s -f "$url" -o "$output_file"; then
+        echo "Saved data to $output_file ✅"
+    else
+        echo "Failed to fetch data for $pokemon ❌" >&2
+    fi
+
+    # Delay between requests
+    sleep 1
+done
+
+#!/bin/bash
+
+# Directory to store JSON files
+DATA_DIR="pokemon_data"
+mkdir -p "$DATA_DIR"
+
+# Error log file
+ERROR_LOG="errors.txt"
+> "$ERROR_LOG"  # Clear previous errors
+
+# List of Pokémon
+pokemon_list=("bulbasaur" "ivysaur" "venusaur" "charmander" "charmeleon")
+
+# Function to fetch data with retry logic
+fetch_pokemon() {
+    local pokemon="$1"
+    local retries=3
+    local count=0
+    local success=0
+    local url="https://pokeapi.co/api/v2/pokemon/$pokemon"
+    local output_file="$DATA_DIR/${pokemon}.json"
+
+    echo "Fetching data for $pokemon..."
+
+    while [ $count -lt $retries ]; do
+        if curl -s -f "$url" -o "$output_file"; then
+            echo "Saved data to $output_file ✅"
+            success=1
+            break
+        else
+            ((count++))
+            echo "Attempt $count failed for $pokemon... retrying in 1s"
+            sleep 1
+        fi
+    done
+
+    if [ $success -ne 1 ]; then
+        echo "[$(date)] Failed to fetch data for $pokemon after $retries attempts" >> "$ERROR_LOG"
+        echo "Failed to fetch data for $pokemon ❌"
+    fi
+}
+
+# Main loop
+for pokemon in "${pokemon_list[@]}"; do
+    fetch_pokemon "$pokemon"
+    sleep 1  # Rate-limit between different Pokémon
+done
