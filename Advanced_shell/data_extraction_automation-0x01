@@ -1,10 +1,14 @@
 #!/bin/bash
 
-# Read and extract values using jq, sed, and awk from data.json
-NAME=$(jq -r '.name' data.json | sed 's/.*/\u&/')  # Capitalize first letter
-HEIGHT=$(jq -r '.height' data.json | awk '{printf "%.1f", $1 / 10}')  # Convert to meters
-WEIGHT=$(jq -r '.weight' data.json | awk '{printf "%.0f", $1 / 10}')  # Convert to kg
-TYPE=$(jq -r '.types[0].type.name' data.json | sed 's/.*/\u&/')  # Capitalize first letter
+# Extract values using jq
+name=$(jq -r '.name' data.json | sed 's/.*/\u&/')  # Capitalize name
+type=$(jq -r '.types[0].type.name' data.json | sed 's/.*/\u&/')  # Capitalize type
+height=$(jq -r '.height' data.json)
+weight=$(jq -r '.weight' data.json)
 
-# Print the formatted sentence
-echo "$NAME is of type $TYPE, weighs ${WEIGHT}kg, and is ${HEIGHT}m tall."
+# Format height and weight
+formatted_height=$(awk "BEGIN { printf \"%.1f\", $height / 10 }")
+formatted_weight=$(awk "BEGIN { printf \"%.0f\", $weight / 10 }")
+
+# Final formatted sentence (must match exactly)
+echo "$name is of type $type, weighs ${formatted_weight}kg, and is ${formatted_height}m tall."

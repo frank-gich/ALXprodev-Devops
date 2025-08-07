@@ -1,24 +1,38 @@
 #!/bin/bash
 
-# Directory to save JSON files
+# Directory setup
 DATA_DIR="pokemon_data"
 mkdir -p "$DATA_DIR"
-
-# Error log file
 ERROR_LOG="errors.txt"
 > "$ERROR_LOG"
 
 # List of Pokémon
 pokemon_list=("bulbasaur" "ivysaur" "venusaur" "charmander" "charmeleon")
 
-# Fetch function (runs in background)
+# Store background process IDs
+pids=()
+
+# Clean up function on exit
+cleanup() {
+    echo "Cleaning up background jobs..."
+    for pid in "${pids[@]}"; do
+        if kill -0 "$pid" 2>/dev/null; then
+            kill "$pid" && echo "Killed process $pid"
+        fi
+    done
+    exit 1
+}
+
+# Trap termination signals
+trap cleanup SIGINT SIGTERM
+
+# Fetch function
 fetch_pokemon() {
     local pokemon="$1"
     local url="https://pokeapi.co/api/v2/pokemon/$pokemon"
     local output_file="$DATA_DIR/${pokemon}.json"
 
     echo "Fetching data for $pokemon..."
-
     if curl -s -f "$url" -o "$output_file"; then
         echo "Saved data to $output_file ✅"
     else
@@ -26,12 +40,15 @@ fetch_pokemon() {
     fi
 }
 
-# Main logic: spawn background jobs
+# Spawn background jobs and track their PIDs
 for pokemon in "${pokemon_list[@]}"; do
     fetch_pokemon "$pokemon" &
+    pids+=($!)
 done
 
-# Wait for all background processes to complete
-wait
+# Wait for all to finish
+for pid in "${pids[@]}"; do
+    wait "$pid"
+done
 
 echo "All fetches complete ✅"
